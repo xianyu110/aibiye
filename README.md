@@ -1,20 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# AI毕业 - 智能论文写作助手 (AI Thesis Assistant)
 
-# Run and deploy your AI Studio app
+基于 Google Gemini 2.5 Flash 模型构建的现代化论文写作辅助工具。本项目复刻并增强了主流论文写作网站的核心体验，专为中国高校师生打造。
 
-This contains everything you need to run your app locally.
+## 🌟 项目亮点
 
-View your app in AI Studio: https://ai.studio/apps/drive/1eOWEuBk8Uhns-utTP8U32aEI304Ul3Kq
+*   **完全汉化**: 从界面到 AI 生成内容，全流程深度本地化，符合中文学术习惯。
+*   **智能生成**: 利用 Gemini 2.5 的强大推理能力，一键生成高质量的三级大纲、开题报告、中英文摘要及正文草稿。
+*   **学术规范**: 针对性优化的 Prompt 提示词，确保生成内容逻辑严密，并支持 GB/T 7714-2015 参考文献格式。
+*   **所见即所得**: 内置轻量级 Markdown 渲染引擎，提供类 Word 的文档阅读体验，支持一键复制和下载。
+*   **精美 UI**: 使用 Tailwind CSS 打造的现代化响应式界面，包含流畅的动画和交互反馈。
 
-## Run Locally
+## 🚀 核心功能
 
-**Prerequisites:**  Node.js
+1.  **多维度定制**:
+    *   **学历层次**: 支持专科、本科、硕士、博士及通用类型。
+    *   **文档类型**: 覆盖毕业论文、课程论文、期刊论文、开题报告、文献综述。
+    *   **学科领域**: 自定义专业背景，精准匹配学术语境。
 
+2.  **AI 深度写作**:
+    *   自动构建逻辑严密的三级目录结构。
+    *   生成标准的中英文双语摘要。
+    *   撰写绪论/引言草稿，自动加粗核心概念。
+    *   提供相关性高的参考文献列表。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3.  **结果交互**:
+    *   文档级预览模式。
+    *   支持 Markdown 源码下载。
+    *   一键复制纯文本。
+
+## 🛠️ 技术栈
+
+*   **前端框架**: React 19 + TypeScript
+*   **样式库**: Tailwind CSS
+*   **AI 模型**: Google Gemini API (@google/genai SDK) - 使用 `gemini-2.5-flash` 模型
+*   **图标库**: Lucide React
+
+## 📂 项目结构
+
+*   `App.tsx`: 主应用逻辑及状态管理。
+*   `services/geminiService.ts`: 封装 Gemini API 调用，包含核心 System Prompt。
+*   `components/PaperForm.tsx`: 复杂的表单交互组件。
+*   `components/ResultView.tsx`: 包含自定义 Markdown 渲染器的结果展示页。
+
+## ⚠️ 免责声明
+
+本工具生成的论文大纲、草稿及参考文献仅供学术研究参考，**严禁直接用于抄袭或学术不端行为**。请遵循所在学校的学术规范及道德准则。
