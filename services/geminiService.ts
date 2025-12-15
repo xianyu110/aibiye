@@ -72,9 +72,21 @@ export const paraphraseText = async (text: string, mode: ParaphraseMode = 'stand
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("DeepSeek API Error:", errorData);
-      throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText };
+      }
+      console.error("DeepSeek API Error:", {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+        url: apiUrl,
+        model: model
+      });
+      throw new Error(`API请求失败: ${response.status} ${response.statusText}${errorData.message ? ' - ' + errorData.message : ''}`);
     }
 
     const result = await response.json();

@@ -16,6 +16,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.11.0",
     "pdf-parse": "^2.4.5",

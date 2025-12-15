@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, File, X, CheckCircle, AlertCircle, FileText, Image, FileSpreadsheet, Presentation, Brain, Cpu } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, File, X, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import { DocumentService, ProcessedDocument } from '../services/documentService';
-import { ConfigService } from '../services/configService';
 
 interface DocumentUploadProps {
   onTextExtracted: (text: string, metadata?: ProcessedDocument['metadata']) => void;
@@ -14,13 +13,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
   const [extractedText, setExtractedText] = useState('');
   const [documentMetadata, setDocumentMetadata] = useState<ProcessedDocument['metadata'] | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [useGemini, setUseGemini] = useState(true);
+  const [extractingProgress, setExtractingProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 检查是否可以使用Gemini
-  useEffect(() => {
-    setUseGemini(ConfigService.canUseGeminiForDocuments());
-  }, []);
 
   const supportedFormats = [
     { extension: 'txt', name: '文本文档', icon: FileText },
@@ -67,8 +61,28 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
 
   const extractTextFromFile = async (file: File) => {
     setIsExtracting(true);
+    setExtractingProgress(0);
+
     try {
-      const processedDocument = await DocumentService.processDocument(file, useGemini);
+      // 对于.doc文件，提供进度回调
+      const isDocFile = file.name.toLowerCase().endsWith('.doc');
+
+      let processedDocument;
+      if (isDocFile) {
+        // 需要特殊处理进度，先简单实现
+        const progressInterval = setInterval(() => {
+          setExtractingProgress(prev => Math.min(prev + 10, 90));
+        }, 200);
+
+        processedDocument = await DocumentService.processDocument(file);
+        clearInterval(progressInterval);
+        setExtractingProgress(100);
+      } else {
+        setExtractingProgress(50);
+        processedDocument = await DocumentService.processDocument(file);
+        setExtractingProgress(100);
+      }
+
       const cleanedText = DocumentService.cleanText(processedDocument.text);
 
       setExtractedText(cleanedText);
@@ -79,8 +93,12 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
       alert(error instanceof Error ? error.message : '文件处理失败，请重试或尝试其他文件');
       setUploadedFile(null);
       setDocumentMetadata(null);
+      setExtractingProgress(0);
     } finally {
-      setIsExtracting(false);
+      setTimeout(() => {
+        setIsExtracting(false);
+        setExtractingProgress(0);
+      }, 500);
     }
   };
 
@@ -174,30 +192,31 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
           </div>
 
           {isExtracting ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
-              <span className="text-sm text-gray-600">
-                {useGemini ? '使用 AI 智能提取文本内容...' : '正在提取文本内容...'}
-              </span>
-              {useGemini && <Brain className="w-4 h-4 text-purple-600 ml-2" />}
+            <div className="py-4">
+              <div className="flex items-center justify-center mb-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
+                <span className="text-sm text-gray-600">
+                  {uploadedFile?.name.endsWith('.doc') ? '正在转换.doc文件...' : '正在提取文本内容...'}
+                </span>
+              </div>
+              {extractingProgress > 0 && (
+                <div className="w-full bg-gray-200 rounded-full h-2 ml-8 mr-8">
+                  <div
+                    className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${extractingProgress}%` }}
+                  ></div>
+                </div>
+              )}
+              {uploadedFile?.name.endsWith('.doc') && (
+                <div className="text-xs text-gray-500 mt-2 text-center">
+                  {extractingProgress < 30 ? '解析文档结构...' :
+                   extractingProgress < 70 ? '提取文本内容...' :
+                   '创建DOCX格式...'}
+                </div>
+              )}
             </div>
           ) : extractedText ? (
             <div className="mt-4">
-              {documentMetadata?.processingMethod && (
-                <div className="flex items-center justify-center py-2 mb-2">
-                  {documentMetadata.processingMethod === 'gemini' ? (
-                    <div className="flex items-center space-x-2 text-xs text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
-                      <Brain className="w-3 h-3" />
-                      <span>AI智能解析</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2 text-xs text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
-                      <Cpu className="w-3 h-3" />
-                      <span>原生解析</span>
-                    </div>
-                  )}
-                </div>
-              )}
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-700">提取的文本内容</span>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
@@ -231,15 +250,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
 
       {/* 支持的格式说明 */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-blue-900">支持的文档格式</h4>
-          {useGemini && (
-            <div className="flex items-center space-x-1 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-              <Brain className="w-3 h-3" />
-              <span>AI增强</span>
-            </div>
-          )}
-        </div>
+        <h4 className="font-semibold text-blue-900 mb-3">支持的文档格式</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {supportedFormats.map((format) => {
             const Icon = format.icon;
@@ -252,20 +263,10 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
           })}
         </div>
         <p className="text-xs text-blue-700 mt-3">
-          {useGemini ? (
-            <>
-              🚀 <strong>AI智能解析已启用</strong>：使用Gemini 2.0 Flash模型，支持OCR文字识别、表格理解、复杂布局解析
-              <br />
-              💡 提示：PDF、图片、Office文档解析效果显著提升
-            </>
-          ) : (
-            <>
-              💡 提示：配置Gemini API Key可启用AI智能解析，大幅提升文档解析效果
-            </>
-          )}
+          💡 提示：使用mammoth.js库进行本地文档解析，安全可靠，保护隐私
         </p>
         <p className="text-xs text-orange-600 mt-2">
-          ⚠️ 注意：.doc格式需要Gemini API处理且限制为20MB，.docx和.txt格式可本地处理限制为100MB
+          ⚠️ 注意：.doc格式自动转换为.docx后解析，.docx和.txt格式可直接解析，文件大小最大支持100MB
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 // 文档处理服务
 import mammoth from 'mammoth';
+import { DocConverter } from './docConverter';
 
 export interface ProcessedDocument {
   text: string;
@@ -106,7 +107,7 @@ export class DocumentService {
       const extension = file.name.split('.').pop()?.toLowerCase();
 
       if (extension === 'doc') {
-        // 对于.doc文件，提供用户指导
+        // 对于.doc文件，使用转换器
         return await this.processDocFile(file);
       } else {
         // 对于.docx文件，使用mammoth库
@@ -178,11 +179,45 @@ export class DocumentService {
   }
 
   // 处理.doc文件
-  private static async processDocFile(file: File): Promise<string> {
-    // 提供用户手动转换指导
-    return `您上传的是旧版Word文档(.doc格式)。
+  private static async processDocFile(file: File, onProgress?: (progress: number) => void): Promise<string> {
+    try {
+      console.log('开始转换.doc文件:', file.name);
 
-由于浏览器安全限制，无法直接解析.doc格式的文件。请选择以下方案之一：
+      // 使用DocConverter转换为.docx
+      onProgress?.(10);
+      const docxBlob = await DocConverter.convertDocToDocx(file, (progress) => {
+        onProgress?.(10 + progress * 0.7); // 10% - 80%
+      });
+
+      onProgress?.(85);
+
+      // 创建新的File对象
+      const docxFile = new File([docxBlob], file.name.replace('.doc', '.docx'), {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+
+      onProgress?.(90);
+
+      // 使用mammoth解析转换后的docx文件
+      const result = await this.processDocxFile(docxFile);
+
+      onProgress?.(100);
+
+      // 添加转换说明
+      return `从 "${file.name}" 提取的内容：
+
+${result}
+
+---
+注意：此内容由.doc格式自动转换提取，可能存在格式差异。如需完整准确的内容，建议使用Microsoft Word直接打开.doc文件。`;
+
+    } catch (error) {
+      console.error('DOC文件转换失败:', error);
+
+      // 转换失败时，提供用户指导
+      return `您上传的是旧版Word文档(.doc格式)。
+
+自动转换失败���请选择以下方案之一：
 
 方案一：手动转换文档（推荐）
 1. 使用Microsoft Word或WPS打开文档
@@ -204,7 +239,10 @@ export class DocumentService {
 文件名：${file.name}
 文件大小：${(file.size / 1024).toFixed(1)} KB
 
+错误信息：${error instanceof Error ? error.message : '未知错误'}
+
 提示：为了获得最佳体验，建议使用.docx格式文件。`;
+    }
   }
 
   // 清理和预处理文本
