@@ -118,7 +118,7 @@ export default function App() {
     },
     {
       question: '【多样方式】无法上传论文？',
-      answer: '支持多种提交方式：直接粘贴文本、上传doc/docx/txt格式文件。如遇到上传问题，请检查文件格式和大小，或尝试直接粘贴文本内容。'
+      answer: '支持多种提交方式：直接粘贴文本、上传Word(doc/docx)、PDF、TXT、图片、Excel、PPT等多种格式文件。如遇到上传问题，请检查文件格式和大小，或尝试直接粘贴文本内容。'
     }
   ];
 

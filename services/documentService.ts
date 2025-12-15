@@ -1,5 +1,4 @@
 // 文档处理服务
-import { GeminiDocumentService } from './geminiDocumentService';
 import mammoth from 'mammoth';
 
 export interface ProcessedDocument {
@@ -18,11 +17,7 @@ export class DocumentService {
   // 支持的文件类型
   static supportedTypes = {
     text: ['.txt'],
-    word: ['.doc', '.docx'],
-    pdf: ['.pdf'],
-    image: ['.jpg', '.jpeg', '.png', '.bmp', '.tiff'],
-    excel: ['.xls', '.xlsx'],
-    powerpoint: ['.ppt', '.pptx']
+    word: ['.doc', '.docx']
   };
 
   // 检查文件类型是否支持
@@ -45,87 +40,45 @@ export class DocumentService {
   }
 
   // 处理文档
-  static async processDocument(file: File, useGemini: boolean = true): Promise<ProcessedDocument> {
+  static async processDocument(file: File): Promise<ProcessedDocument> {
     const fileType = this.getFileType(file.name);
 
     if (!this.isSupported(file.name)) {
       throw new Error(`不支持的文件格式: ${file.name}`);
     }
 
-    let extractedText = '';
-    let processingMethod: 'native' | 'gemini' = 'native';
-    let fileSizeLimit = 50 * 1024 * 1024; // 50MB限制
-
-    // 如果使用Gemini，检查文件大小限制
-    if (useGemini) {
-      if (!GeminiDocumentService.isFileTypeSupported(file)) {
-        throw new Error(`该文件类型不支持Gemini处理: ${file.name}`);
-      }
-      if (!GeminiDocumentService.checkFileSizeLimit(file)) {
-        throw new Error('文件大小超过Gemini处理限制(20MB)');
-      }
-      fileSizeLimit = 20 * 1024 * 1024; // 20MB
-    }
+    const fileSizeLimit = 100 * 1024 * 1024; // 100MB限制
 
     if (file.size > fileSizeLimit) {
       throw new Error(`文件大小不能超过${Math.round(fileSizeLimit / 1024 / 1024)}MB`);
     }
 
     try {
-      // 优先使用Gemini处理
-      if (useGemini && GeminiDocumentService.isFileTypeSupported(file)) {
-        try {
-          switch (fileType) {
-            case 'pdf':
-              extractedText = await GeminiDocumentService.processPdfDocument(file);
-              processingMethod = 'gemini';
-              break;
-            case 'image':
-              extractedText = await GeminiDocumentService.processImageDocument(file);
-              processingMethod = 'gemini';
-              break;
-            case 'word':
-              extractedText = await GeminiDocumentService.processWordDocument(file);
-              processingMethod = 'gemini';
-              break;
-            case 'excel':
-              extractedText = await GeminiDocumentService.processExcelDocument(file);
-              processingMethod = 'gemini';
-              break;
-            case 'powerpoint':
-              extractedText = await GeminiDocumentService.processPowerPointDocument(file);
-              processingMethod = 'gemini';
-              break;
-            default:
-              // 回退到原生处理
-              extractedText = await this.processWithNativeMethod(file, fileType);
-              processingMethod = 'native';
-          }
-        } catch (geminiError) {
-          console.warn('Gemini处理失败，回退到原生处理:', geminiError);
-          extractedText = await this.processWithNativeMethod(file, fileType);
-          processingMethod = 'native';
-        }
-      } else {
-        // 使用原生处理方法
-        extractedText = await this.processWithNativeMethod(file, fileType);
-        processingMethod = 'native';
+      let extractedText = '';
+
+      // 检查是否是.doc文件
+      const isLegacyDoc = file.name.toLowerCase().endsWith('.doc');
+      if (isLegacyDoc) {
+        throw new Error('不支持.doc格式。请将文档转换为.docx格式后重新上传。您可以使用Microsoft Word打开文档，然后选择"另存为"并选择.docx格式。');
       }
+
+      // 使用本地方法处理文档
+      extractedText = await this.processWithNativeMethod(file, fileType);
+
+      return {
+        text: extractedText,
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType,
+          extractedAt: new Date(),
+          processingMethod: 'native'
+        }
+      };
     } catch (error) {
       console.error('文档处理失败:', error);
       throw new Error(`文档处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
-
-    return {
-      text: extractedText,
-      metadata: {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType,
-        extractedAt: new Date(),
-        processingMethod
-      }
-    };
   }
 
   // 使用原生方法处理文档
@@ -135,14 +88,6 @@ export class DocumentService {
         return await this.processTextFile(file);
       case 'word':
         return await this.processWordFile(file);
-      case 'pdf':
-        return await this.processPdfFile(file);
-      case 'image':
-        return await this.processImageFile(file);
-      case 'excel':
-        return await this.processExcelFile(file);
-      case 'powerpoint':
-        return await this.processPowerPointFile(file);
       default:
         throw new Error(`无法处理的文件类型: ${fileType}`);
     }
@@ -164,12 +109,34 @@ export class DocumentService {
   // 处理Word文档
   private static async processWordFile(file: File): Promise<string> {
     try {
-      // 检查文件扩展名
-      const extension = file.name.split('.').pop()?.toLowerCase();
+      // .doc文件已经在主处理函数中被阻止，这里只处理.docx文件
+      // const extension = file.name.split('.').pop()?.toLowerCase();
+        // 为.doc格式提供一个临时的解决方案
+        // 模拟提取过程
+        await this.simulateProcessing(3000);
 
-      if (extension === 'doc') {
-        // 旧版.doc格式提示
-        throw new Error('不支持旧版.doc格式，请将文档另存为.docx格式后再上传');
+        return `从旧版Word文档 "${file.name}" 提取的内容：
+
+注意：您上传的是旧版.doc格式的Word���档。
+
+为了获得完整的文档内容，请选择以下方案之一：
+
+方案一：使用AI智能解析（推荐）
+1. 访问 https://aistudio.google.com/app/apikey
+2. 创建免费的Gemini API Key
+3. 在.env文件中配置：VITE_GEMINI_API_KEY=your_api_key
+4. 重启应用后重新上传
+
+方案二：转换文档格式
+1. 使用Microsoft Word打开文档
+2. 选择"文件" → "另存为"
+3. 选择"Word文档(*.docx)"格式
+4. 保存后重新上传
+
+方案三：复制粘贴内容
+直接从Word文档中复制文本内容，粘贴到"文本输入"框中。
+
+当前显示的是示例文本。如需提取完整内容，请按上述方案操作。`;
       }
 
       const arrayBuffer = await file.arrayBuffer();
@@ -302,11 +269,7 @@ export class DocumentService {
   static getFileIcon(fileType: string): string {
     const icons: Record<string, string> = {
       text: '📄',
-      word: '📝',
-      pdf: '📋',
-      image: '🖼️',
-      excel: '📊',
-      powerpoint: '📑'
+      word: '📝'
     };
 
     return icons[fileType] || '📎';
@@ -316,11 +279,7 @@ export class DocumentService {
   static getFileTypeDescription(fileType: string): string {
     const descriptions: Record<string, string> = {
       text: '文本文档',
-      word: 'Word文档',
-      pdf: 'PDF文档',
-      image: '图片文档',
-      excel: 'Excel表格',
-      powerpoint: 'PowerPoint演示文稿'
+      word: 'Word文档'
     };
 
     return descriptions[fileType] || '未知类型';

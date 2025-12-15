@@ -72,7 +72,13 @@ export class GeminiDocumentService {
       'bmp': 'image/bmp',
       'tiff': 'image/tiff',
       'gif': 'image/gif',
-      'webp': 'image/webp'
+      'webp': 'image/webp',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     };
 
     const extension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -81,37 +87,72 @@ export class GeminiDocumentService {
 
   // 调用Gemini API
   private static async callGemini(request: GeminiRequest): Promise<string> {
-    if (!this.config.apiKey) {
-      throw new Error('Gemini API Key未配置');
+    if (!this.config.apiKey || this.config.apiKey === 'your_gemini_api_key_here') {
+      throw new Error('Gemini API Key未配置。请检查您的.env文件中的VITE_GEMINI_API_KEY配置');
     }
 
-    const url = `${this.config.apiUrl}/models/${this.config.model}:generateContent?key=${this.config.apiKey}`;
+    // 使用配置的API URL
+    const apiUrl = this.config.apiUrl || 'https://generativelanguage.googleapis.com/v1beta';
+
+    // 根据API URL格式构建请求URL
+    let url: string;
+    if (apiUrl.includes('google.com') || apiUrl.includes('googleapis.com')) {
+      // 官方Google API格式
+      url = `${apiUrl}/models/${this.config.model}:generateContent?key=${this.config.apiKey}`;
+    } else {
+      // 中转API格式
+      url = `${apiUrl}/models/${this.config.model}:generateContent`;
+    }
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // 根据API类型添加认证头
+      if (apiUrl.includes('google.com') || apiUrl.includes('googleapis.com')) {
+        // 官方API使用URL参数认证，不需要额外的header
+      } else {
+        // 中转API使用Authorization头
+        headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(request)
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API调用失败: ${response.status} ${errorText}`);
+        console.error('Gemini API错误详情:', errorText);
+
+        if (response.status === 400) {
+          throw new Error('请求格式错误，可能是文件过大或格式不支持');
+        } else if (response.status === 403) {
+          throw new Error('API Key无效或权限不足���请检查您的Gemini API Key');
+        } else if (response.status === 429) {
+          throw new Error('API调用频率过高，请稍后重试');
+        } else {
+          throw new Error(`API调用失败 (${response.status}): ${errorText}`);
+        }
       }
 
       const data: GeminiResponse = await response.json();
 
       if (!data.candidates || data.candidates.length === 0) {
-        throw new Error('Gemini API返回空结果');
+        throw new Error('Gemini API返回空结果，可能是文档内容无法识别');
       }
 
       const text = data.candidates[0].content.parts[0]?.text || '';
       return text;
     } catch (error) {
       console.error('Gemini API调用错误:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('网络连接错误，请检查网络后重试');
+      }
     }
   }
 
@@ -209,17 +250,27 @@ export class GeminiDocumentService {
     try {
       const base64Data = await this.fileToBase64(file);
 
+      // 检测文件格式
+      const isLegacyDoc = file.name.toLowerCase().endsWith('.doc');
+      const mimeType = isLegacyDoc
+        ? 'application/msword'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      const docType = isLegacyDoc ? 'Word 97-2003 (.doc)' : 'Word 2007+ (.docx)';
+
       const prompt = language === 'zh'
-        ? `请提取Word文档中的所有文字内容。要求：
+        ? `请提取${docType}文档中的所有文字内容。要求：
 1. 保持原文的段落结构和格式
 2. 识别标题、正文、表格等内容
-3. 保留文档的结构层次
-4. 只返回提取的文字内容，不要添加额外说明`
-        : `Extract all text content from this Word document. Requirements:
+3. 保留文档的结构层次和章节编号
+4. 移除页眉页脚信息
+5. 只返回提取的文字内容，不要添加额外说明`
+        : `Extract all text content from this ${docType} document. Requirements:
 1. Maintain the original paragraph structure and format
 2. Recognize titles, body text, tables, and other content
-3. Preserve the document's structural hierarchy
-4. Only return the extracted text content without additional explanations`;
+3. Preserve the document's structural hierarchy and section numbers
+4. Remove headers and footers
+5. Only return the extracted text content without additional explanations`;
 
       const request: GeminiRequest = {
         contents: [
@@ -228,7 +279,7 @@ export class GeminiDocumentService {
             parts: [
               {
                 inline_data: {
-                  mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  mime_type: mimeType,
                   data: base64Data
                 }
               },

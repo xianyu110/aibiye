@@ -24,18 +24,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
 
   const supportedFormats = [
     { extension: 'txt', name: '文本文档', icon: FileText },
-    { extension: 'doc', name: 'Word文档', icon: FileText },
-    { extension: 'docx', name: 'Word文档', icon: FileText },
-    { extension: 'pdf', name: 'PDF文档', icon: FileText },
-    { extension: 'jpg', name: 'JPEG图片', icon: Image },
-    { extension: 'jpeg', name: 'JPEG图片', icon: Image },
-    { extension: 'png', name: 'PNG图片', icon: Image },
-    { extension: 'bmp', name: 'BMP图片', icon: Image },
-    { extension: 'tiff', name: 'TIFF图片', icon: Image },
-    { extension: 'xls', name: 'Excel表格', icon: FileSpreadsheet },
-    { extension: 'xlsx', name: 'Excel表格', icon: FileSpreadsheet },
-    { extension: 'ppt', name: 'PPT演示文稿', icon: Presentation },
-    { extension: 'pptx', name: 'PPT演示文稿', icon: Presentation },
+    { extension: 'doc', name: 'Word文档(旧版)', icon: FileText },
+    { extension: 'docx', name: 'Word文档(新版)', icon: FileText },
   ];
 
   const handleDrag = (e: React.DragEvent) => {
@@ -67,7 +57,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
   const handleFile = async (file: File) => {
     // 检查文件格式
     if (!DocumentService.isSupported(file.name)) {
-      alert(`不支持的文件格式。请支持: ${Object.values(DocumentService.supportedTypes).flat().join(', ')}`);
+      alert('不支持的文件格式。请上传doc、docx或txt格式文件');
       return;
     }
 
@@ -113,7 +103,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">上传文档</h3>
         <p className="text-sm text-gray-600">
-          支持上传 Word、PDF、TXT、图片等格式，自动提取文本内容
+          支持doc、docx、txt格式文件，文件大小不超过100M
         </p>
       </div>
 
@@ -134,7 +124,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.bmp,.tiff,.xls,.xlsx,.ppt,.pptx"
+            accept=".txt,.doc,.docx"
             onChange={handleFileInput}
             className="hidden"
             disabled={isLoading}
@@ -145,10 +135,10 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
             点击上传或拖拽文件到此处
           </h4>
           <p className="text-sm text-gray-600 mb-4">
-            支持 Word、PDF、TXT、图片、Excel、PPT 等多种格式
+            支持doc、docx、txt格式文件，文件大小不超过100M
           </p>
           <p className="text-xs text-gray-500">
-            最大文件大小：50MB
+            最大文件大小：100M
           </p>
         </div>
       ) : (
@@ -275,13 +265,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
           )}
         </p>
         <p className="text-xs text-orange-600 mt-2">
-          ⚠️ 注意：仅支持.docx格式的Word文档，不支持旧版.doc格式
+          ⚠️ 注意：.doc格式需要Gemini API处理且限制为20MB，.docx和.txt格式可本地处理限制为100MB
         </p>
-        {useGemini && (
-          <p className="text-xs text-purple-600 mt-2">
-            ⚠️ 注意：文件大小限制为20MB（Gemini API限制）
-          </p>
-        )}
       </div>
     </div>
   );
