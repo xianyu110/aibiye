@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CheckCircle, Copy, Download, RefreshCw, ArrowLeft, Sparkles, Eye, EyeOff, FileDiff } from 'lucide-react';
+import { CheckCircle, Copy, Download, RefreshCw, ArrowLeft, Sparkles, Eye, EyeOff, FileDiff, FileText } from 'lucide-react';
 import { ParaphraseMode } from '../types';
+import { downloadAsDocx } from '../services/docxService';
 
 interface ResultViewProps {
   originalText: string;
@@ -12,13 +13,14 @@ interface ResultViewProps {
 export const ResultView: React.FC<ResultViewProps> = ({ originalText, paraphrasedText, onReset, onReparaphrase }) => {
   const [viewMode, setViewMode] = useState<'result' | 'comparison'>('result');
   const [showOriginal, setShowOriginal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleCopy = (text: string, message: string) => {
     navigator.clipboard.writeText(text);
     alert(message);
   };
 
-  const handleDownload = () => {
+  const handleDownloadTxt = () => {
     const element = document.createElement("a");
     const file = new Blob([paraphrasedText], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
@@ -26,6 +28,20 @@ export const ResultView: React.FC<ResultViewProps> = ({ originalText, paraphrase
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  const handleDownloadDocx = async () => {
+    try {
+      setIsDownloading(true);
+      const filename = `改写结果_${new Date().getTime()}.docx`;
+      await downloadAsDocx(paraphrasedText, filename);
+      alert('Word文档已下载！');
+    } catch (error) {
+      console.error('下载失败:', error);
+      alert('下载失败，请重试');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const calculateSimilarity = () => {
@@ -124,11 +140,29 @@ export const ResultView: React.FC<ResultViewProps> = ({ originalText, paraphrase
           </button>
 
           <button
-            onClick={handleDownload}
-            className="flex items-center space-x-2 px-6 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
+            onClick={handleDownloadDocx}
+            disabled={isDownloading}
+            className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {isDownloading ? (
+              <>
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                生成中...
+              </>
+            ) : (
+              <>
+                <FileText className="w-5 h-5" />
+                下载Word
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleDownloadTxt}
+            className="flex items-center space-x-2 px-6 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
           >
             <Download className="w-5 h-5" />
-            下载文件
+            下载TXT
           </button>
         </div>
 
