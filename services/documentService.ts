@@ -56,12 +56,6 @@ export class DocumentService {
     try {
       let extractedText = '';
 
-      // 检查是否是.doc文件
-      const isLegacyDoc = file.name.toLowerCase().endsWith('.doc');
-      if (isLegacyDoc) {
-        throw new Error('不支持.doc格式。请将文档转换为.docx格式后重新上传。您可以使用Microsoft Word打开文档，然后选择"另存为"并选择.docx格式。');
-      }
-
       // 使用本地方法处理文档
       extractedText = await this.processWithNativeMethod(file, fileType);
 
@@ -109,40 +103,30 @@ export class DocumentService {
   // 处理Word文档
   private static async processWordFile(file: File): Promise<string> {
     try {
-      // .doc文件已经在主处理函数中被阻止，这里只处理.docx文件
-      // const extension = file.name.split('.').pop()?.toLowerCase();
-        // 为.doc格式提供一个临时的解决方案
-        // 模拟提取过程
-        await this.simulateProcessing(3000);
+      const extension = file.name.split('.').pop()?.toLowerCase();
 
-        return `从旧版Word文档 "${file.name}" 提取的内容：
-
-注意：您上传的是旧版.doc格式的Word���档。
-
-为了获得完整的文档内容，请选择以下方案之一：
-
-方案一：使用AI智能解析（推荐）
-1. 访问 https://aistudio.google.com/app/apikey
-2. 创建免费的Gemini API Key
-3. 在.env文件中配置：VITE_GEMINI_API_KEY=your_api_key
-4. 重启应用后重新上传
-
-方案二：转换文档格式
-1. 使用Microsoft Word打开文档
-2. 选择"文件" → "另存为"
-3. 选择"Word文档(*.docx)"格式
-4. 保存后重新上传
-
-方案三：复制粘贴内容
-直接从Word文档中复制文本内容，粘贴到"文本输入"框中。
-
-当前显示的是示例文本。如需提取完整内容，请按上述方案操作。`;
+      if (extension === 'doc') {
+        // 对于.doc文件，提供用户指导
+        return await this.processDocFile(file);
+      } else {
+        // 对于.docx文件，使用mammoth库
+        return await this.processDocxFile(file);
       }
+    } catch (error) {
+      console.error('Word文档解析失败:', error);
+      if (error instanceof Error) {
+        throw new Error(`Word文档解析失败: ${error.message}`);
+      }
+      throw new Error('Word文档解析失败: 未知错误，请确保文档格式正确');
+    }
+  }
 
+  // 处理.docx文件
+  private static async processDocxFile(file: File): Promise<string> {
+    try {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.extractRawText({
         arrayBuffer,
-        // 添加更多配置选项
         options: {
           includeDefaultStyleMap: true,
           styleMap: [
@@ -151,7 +135,9 @@ export class DocumentService {
             "p[style-name='Heading 3'] => h3:fresh",
             "p[style-name='Title'] => h1:fresh",
             "p[style-name='Subtitle'] => h2:fresh"
-          ]
+          ],
+          // 转换表格
+          tables: true
         }
       });
 
@@ -169,63 +155,56 @@ export class DocumentService {
       text = text.replace(/第\s*\d+\s*页/g, '');
       text = text.replace(/Page\s*\d+/g, '');
 
-      // 移除制表符
+      // 移除制表符，替换为空格
       text = text.replace(/\t/g, ' ');
 
-      // 保留段落结构但清理多余空格
+      // 保留段落结构但��理多余空格
       text = text.replace(/ +/g, ' ');
       text = text.replace(/\n +/g, '\n');
 
-      return text.trim();
+      // 清理文档开头和结尾的空白
+      text = text.trim();
+
+      // 如果提取的���本为空或太短，可能是文档损坏或格式问题
+      if (text.length < 10) {
+        throw new Error('文档内容提取失败或文档为空，请检查文档是否损坏');
+      }
+
+      return text;
     } catch (error) {
-      console.error('Word文档解析失败:', error);
-      throw new Error(`Word文档解析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      console.error('DOCX文档解析失败:', error);
+      throw new Error(`DOCX文档解析失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   }
 
-  // 处理PDF文档
-  private static async processPdfFile(file: File): Promise<string> {
-    // 实际项目中需要使用pdf.js或pdf-parse库
-    await this.simulateProcessing(3000);
-    return `从PDF文档 "${file.name}" 提取的文本内容示例。\n\n` +
-           `实际部署时，请集成pdf.js或pdf-parse库来正确解析PDF文档。\n` +
-           `安装命令: npm install pdf-parse\n` +
-           `支持从PDF中提取文本内容。`;
-  }
+  // 处理.doc文件
+  private static async processDocFile(file: File): Promise<string> {
+    // 提供用户手动转换指导
+    return `您上传的是旧版Word文档(.doc格式)。
 
-  // 处理图片文件 (OCR) - 仅当Gemini不可用时使用
-  private static async processImageFile(file: File): Promise<string> {
-    // 当Gemini不可用时的提示
-    await this.simulateProcessing(5000);
-    return `从图片 "${file.name}" 识别的文本内容。\n\n` +
-           `注意：当前使用的是模拟处理。实际部署时建议：\n` +
-           `1. 配置Gemini API Key以获得最佳OCR效果\n` +
-           `2. 或集成Tesseract.js库 (npm install tesseract.js)\n` +
-           `3. Gemini API支持更好的中文识别和复杂布局处理`;
-  }
+由于浏览器安全限制，无法直接解析.doc格式的文件。请选择以下方案之一：
 
-  // 处理Excel文件
-  private static async processExcelFile(file: File): Promise<string> {
-    await this.simulateProcessing(2500);
-    return `从Excel文档 "${file.name}" 提取的表格数据。\n\n` +
-           `注意：当前使用的是模拟处理。实际部署时建议：\n` +
-           `1. 配置Gemini API Key以获得最佳表格识别效果\n` +
-           `2. 或集成xlsx库 (npm install xlsx)\n` +
-           `3. Gemini能够更好地理解表格结构和复杂格式`;
-  }
+方案一：手动转换文档（推荐）
+1. 使用Microsoft Word或WPS打开文档
+2. 选择"文件" → "另存为"
+3. 选择"Word文档(*.docx)"格式
+4. 保存后重新上传转换后的文件
 
-  // 处理PowerPoint文件
-  private static async processPowerPointFile(file: File): Promise<string> {
-    // 实际项目中需要使用pptx2json库
-    await this.simulateProcessing(3000);
-    return `从PowerPoint文档 "${file.name}" 提取的文本��容示例。\n\n` +
-           `实际部署时，请集成相应的PPT解析库来正确解析PowerPoint文档。\n` +
-           `支持提取幻灯片中的文本内容。`;
-  }
+方案二：使用在线转换工具
+1. 访问 https://convertio.co/doc-docx/ 或其他在线转换网站
+2. 上传您的.doc文件
+3. 转换为.docx格式后重新上传
 
-  // 模拟处理延迟
-  private static simulateProcessing(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+方案三：复制粘贴内容
+1. 打开.doc文件
+2. 全选并复制文本内容(Ctrl+A, Ctrl+C)
+3. 粘贴到应用的文本输入框中
+
+文件信息：
+文件名：${file.name}
+文件大小：${(file.size / 1024).toFixed(1)} KB
+
+提示：为了获得最佳体验，建议使用.docx格式文件。`;
   }
 
   // 清理和预处理文本
