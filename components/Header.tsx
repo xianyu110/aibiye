@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   onLogoClick: () => void;
@@ -14,30 +14,30 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
             className="flex items-center cursor-pointer group"
             onClick={onLogoClick}
           >
-            <div className="bg-blue-600 p-2 rounded-lg group-hover:bg-blue-700 transition-colors">
-              <GraduationCap className="h-6 w-6 text-white" />
+            <div className="bg-green-600 p-2 rounded-lg group-hover:bg-green-700 transition-colors">
+              <Sparkles className="h-6 w-6 text-white" />
             </div>
-            <span className="ml-3 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">
-              AI毕业
+            <span className="ml-3 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-teal-600 tracking-tight">
+              AI降重
             </span>
           </div>
           
           <nav className="hidden md:flex space-x-8">
-            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-blue-600 font-medium transition-colors">核心功能</a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-blue-600 font-medium transition-colors">范文库</a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-blue-600 font-medium transition-colors">价格方案</a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-blue-600 font-medium transition-colors">关于我们</a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-green-600 font-medium transition-colors">功能特点</a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-green-600 font-medium transition-colors">使用指南</a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-green-600 font-medium transition-colors">API文档</a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-slate-600 hover:text-green-600 font-medium transition-colors">关于我们</a>
           </nav>
 
           <div className="flex items-center space-x-4">
             <button className="hidden sm:block text-slate-600 hover:text-slate-900 font-medium">
               登录
             </button>
-            <button 
+            <button
               onClick={onLogoClick}
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all shadow-md hover:shadow-lg text-sm"
+              className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-all shadow-md hover:shadow-lg text-sm"
             >
-              开始写作
+              免费使用
             </button>
           </div>
         </div>

@@ -1,156 +1,216 @@
-import React from 'react';
-import { CheckCircle, Copy, Download, RefreshCw, FileText, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Copy, Download, RefreshCw, ArrowLeft, Sparkles, Eye, EyeOff, FileDiff } from 'lucide-react';
+import { ParaphraseMode } from '../types';
 
 interface ResultViewProps {
-  content: string;
+  originalText: string;
+  paraphrasedText: string;
   onReset: () => void;
+  onReparaphrase: (text: string, mode: ParaphraseMode) => void;
 }
 
-export const ResultView: React.FC<ResultViewProps> = ({ content, onReset }) => {
-  const handleCopy = () => {
-    navigator.clipboard.writeText(content);
-    alert('内容已复制到剪贴板！');
+export const ResultView: React.FC<ResultViewProps> = ({ originalText, paraphrasedText, onReset, onReparaphrase }) => {
+  const [viewMode, setViewMode] = useState<'result' | 'comparison'>('result');
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  const handleCopy = (text: string, message: string) => {
+    navigator.clipboard.writeText(text);
+    alert(message);
   };
 
   const handleDownload = () => {
     const element = document.createElement("a");
-    const file = new Blob([content], {type: 'text/markdown'});
+    const file = new Blob([paraphrasedText], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
-    element.download = "毕业论文大纲与草稿_AI毕业.md";
-    document.body.appendChild(element); 
+    element.download = `改写结果_${new Date().getTime()}.txt`;
+    document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
 
-  // Lightweight Markdown Renderer
-  const renderMarkdown = (text: string) => {
-    if (!text) return null;
+  const calculateSimilarity = () => {
+    if (!originalText || !paraphrasedText) return 0;
 
-    const lines = text.split('\n');
-    return lines.map((line, index) => {
-      // Headers
-      if (line.startsWith('# ')) {
-        return <h1 key={index} className="text-3xl font-bold text-slate-900 mt-8 mb-4 border-b pb-2">{parseBold(line.slice(2))}</h1>;
-      }
-      if (line.startsWith('## ')) {
-        return <h2 key={index} className="text-2xl font-bold text-slate-800 mt-6 mb-3">{parseBold(line.slice(3))}</h2>;
-      }
-      if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-xl font-bold text-slate-800 mt-4 mb-2">{parseBold(line.slice(4))}</h3>;
-      }
+    const originalWords = originalText.toLowerCase().split(/\s+/);
+    const paraphrasedWords = paraphrasedText.toLowerCase().split(/\s+/);
 
-      // List items
-      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-        return (
-          <li key={index} className="ml-6 list-disc text-slate-700 leading-relaxed mb-1">
-            {parseBold(line.trim().substring(2))}
-          </li>
-        );
-      }
-      
-       // Numbered list items (simple detection)
-       if (/^\d+\.\s/.test(line.trim())) {
-         return (
-           <div key={index} className="ml-6 text-slate-700 leading-relaxed mb-1 pl-2">
-             {parseBold(line.trim())}
-           </div>
-         );
-       }
+    const originalSet = new Set(originalWords);
+    const paraphrasedSet = new Set(paraphrasedWords);
 
-      // Empty lines
-      if (line.trim() === '') {
-        return <div key={index} className="h-2"></div>;
-      }
+    const intersection = new Set([...originalSet].filter(x => paraphrasedSet.has(x)));
+    const union = new Set([...originalSet, ...paraphrasedSet]);
 
-      // Paragraphs
-      return <p key={index} className="text-slate-700 leading-7 mb-2 text-justify">{parseBold(line)}</p>;
-    });
+    const similarity = intersection.size / union.size;
+    return Math.round((1 - similarity) * 100);
   };
 
-  // Helper to parse **bold** text
-  const parseBold = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="text-slate-900 font-semibold">{part.slice(2, -2)}</strong>;
-      }
-      return part;
-    });
-  };
+  const improvementPercentage = calculateSimilarity();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col h-[calc(100vh-64px)]">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-        <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <CheckCircle className="w-6 h-6 text-green-500" />
-                生成完成
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">AI 已根据您的要求生成了论文大纲与草稿。</p>
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={onReset}
+              className="flex items-center text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              返回改写
+            </button>
+
+            <div className="flex items-center space-x-2">
+              <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
+                降重率: {improvementPercentage}%
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-slate-900 mb-4 flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-green-500 mr-3" />
+              改写完成
+            </h1>
+            <p className="text-slate-600 text-lg">
+              您的文本已成功改写，有效降低了重复率
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <button 
-            onClick={onReset}
-            className="flex items-center px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+
+        {/* View Mode Toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white shadow-sm">
+            <button
+              onClick={() => setViewMode('result')}
+              className={`px-6 py-2 text-sm font-medium rounded-l-lg transition-colors ${
+                viewMode === 'result'
+                  ? 'bg-green-600 text-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              改写结果
+            </button>
+            <button
+              onClick={() => setViewMode('comparison')}
+              className={`px-6 py-2 text-sm font-medium rounded-r-lg transition-colors ${
+                viewMode === 'comparison'
+                  ? 'bg-green-600 text-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <FileDiff className="w-4 h-4 inline mr-1" />
+              对比视图
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-center space-x-4 mb-8">
+          <button
+            onClick={() => onReparaphrase(originalText, 'standard')}
+            className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            重写
+            <RefreshCw className="w-5 h-5" />
+            重新改写
           </button>
-          <button 
-            onClick={handleCopy}
-            className="flex items-center px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+
+          <button
+            onClick={() => handleCopy(paraphrasedText, '改写结果已复制到剪贴板！')}
+            className="flex items-center space-x-2 px-6 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg font-medium hover:bg-slate-50 transition-colors"
           >
-            <Copy className="w-4 h-4 mr-2" />
-            复制
+            <Copy className="w-5 h-5" />
+            复制结果
           </button>
-          <button 
+
+          <button
             onClick={handleDownload}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-md transition-colors"
+            className="flex items-center space-x-2 px-6 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
           >
-            <Download className="w-4 h-4 mr-2" />
-            下载Markdown
+            <Download className="w-5 h-5" />
+            下载文件
           </button>
         </div>
-      </div>
 
-      {/* Document View */}
-      <div className="flex-1 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col ring-1 ring-slate-900/5">
-        {/* Toolbar Simulation */}
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center gap-4 select-none shrink-0">
-            <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400 border border-red-500/20"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-500/20"></div>
-                <div className="w-3 h-3 rounded-full bg-green-400 border border-green-500/20"></div>
+        {/* Content Display */}
+        {viewMode === 'result' ? (
+          /* Result View */
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-50 to-teal-50 px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800">改写结果</h3>
+              <p className="text-sm text-slate-600 mt-1">
+                以下是根据您的要求优化后的文本内容
+              </p>
             </div>
-            <div className="h-4 w-px bg-slate-300 mx-2"></div>
-            <div className="flex items-center gap-6 text-xs text-slate-600 font-medium">
-                <span className="hover:text-blue-600 cursor-pointer transition-colors">文件</span>
-                <span className="hover:text-blue-600 cursor-pointer transition-colors">编辑</span>
-                <span className="hover:text-blue-600 cursor-pointer transition-colors">视图</span>
-                <span className="hover:text-blue-600 cursor-pointer transition-colors">格式</span>
+            <div className="p-8">
+              <div className="prose max-w-none">
+                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {paraphrasedText}
+                </p>
+              </div>
             </div>
-            <div className="flex-1"></div>
-            <div className="text-xs text-slate-400 font-mono">字数统计: {content.length}</div>
-        </div>
-
-        {/* Paper Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-16 bg-white relative">
-            <div className="max-w-[21cm] mx-auto bg-white min-h-full shadow-sm">
-                {renderMarkdown(content)}
-            </div>
-            
-            {/* Watermark simulation */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03] overflow-hidden">
-                <div className="transform -rotate-45 text-6xl font-bold text-slate-900 whitespace-nowrap select-none">
-                    AI BIYE GENERATED • 仅供参考
+          </div>
+        ) : (
+          /* Comparison View */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Original Text */}
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-800">原始文本</h3>
+                <p className="text-sm text-slate-600 mt-1">您输入的原文内容</p>
+              </div>
+              <div className="p-8">
+                <div className="prose max-w-none">
+                  <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">
+                    {originalText}
+                  </p>
                 </div>
+              </div>
             </div>
+
+            {/* Paraphrased Text */}
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-50 to-teal-50 px-6 py-4 border-b border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-800">改写结果</h3>
+                <p className="text-sm text-slate-600 mt-1">优化后的文本内容</p>
+              </div>
+              <div className="p-8">
+                <div className="prose max-w-none">
+                  <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {paraphrasedText}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Statistics */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg p-6 border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-600 mb-2">原文长度</h4>
+            <p className="text-2xl font-bold text-slate-900">{originalText.length} 字符</p>
+          </div>
+          <div className="bg-white rounded-lg p-6 border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-600 mb-2">改写后长度</h4>
+            <p className="text-2xl font-bold text-slate-900">{paraphrasedText.length} 字符</p>
+          </div>
+          <div className="bg-white rounded-lg p-6 border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-600 mb-2">预估降重率</h4>
+            <p className="text-2xl font-bold text-green-600">{improvementPercentage}%</p>
+          </div>
         </div>
-      </div>
-      
-      <div className="mt-6 text-center text-xs text-slate-400">
-        AI 生成内容可能存在错误，请务必核实重要信息。本工具仅用于学术辅助，请遵守学校相关规定。
+
+        {/* Disclaimer */}
+        <div className="mt-12 bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <h4 className="font-semibold text-amber-900 mb-2">⚠️ 重要提示</h4>
+          <ul className="space-y-1 text-sm text-amber-800">
+            <li>• AI改写结果可能存在细微差异，请仔细核对重要信息</li>
+            <li>• 专业的术语和概念可能需要人工调整以确保准确性</li>
+            <li>• 建议多次改写以获得最佳效果</li>
+            <li>• 本工具仅用于学术辅助，请遵守学术诚信规范</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
