@@ -4,7 +4,7 @@ import { ToastContainer } from './components/Toast';
 import { DocumentUpload } from './components/DocumentUpload';
 import { paraphraseText } from './services/geminiService';
 import { ConfigService } from './services/configService';
-import { Sparkles, RefreshCw, Copy, Download, ArrowLeftRight, ChevronDown, Shield, Zap, Target, FileText } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Download, ArrowLeftRight, ChevronDown, Shield, Zap, Target, FileText, Edit3, PenTool, FileText2, Languages } from 'lucide-react';
 
 export default function App() {
   const [originalText, setOriginalText] = useState('');
@@ -137,11 +137,26 @@ export default function App() {
               </div>
             </div>
             <nav className="hidden md:flex items-center space-x-6 text-sm">
-              <a href="#" className="text-gray-600 hover:text-gray-900">论文降重</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">论文写作</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">作文写作</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">长文写作</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">英文翻译</a>
+              <a href="#" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+                <RefreshCw className="w-4 h-4" />
+                <span>论文降重</span>
+              </a>
+              <a href="#" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+                <Edit3 className="w-4 h-4" />
+                <span>论文写作</span>
+              </a>
+              <a href="#" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+                <PenTool className="w-4 h-4" />
+                <span>作文写作</span>
+              </a>
+              <a href="#" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+                <FileText2 className="w-4 h-4" />
+                <span>长文写作</span>
+              </a>
+              <a href="#" className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+                <Languages className="w-4 h-4" />
+                <span>英文翻译</span>
+              </a>
             </nav>
             <div className="flex items-center space-x-3">
               <span className="text-sm text-gray-600">今日大纲: <span className="text-pink-600 font-semibold">17266</span></span>
