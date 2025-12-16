@@ -224,7 +224,7 @@ export default function App() {
           </div>
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             <img 
-              src="https://qn1.meibp.com/paper/img/aigc2.png?10" 
+              src="https://youke2.picui.cn/s1/2025/12/16/69416e104af28.png" 
               alt="AIGC检测对比图" 
               className="w-full rounded-xl"
             />
