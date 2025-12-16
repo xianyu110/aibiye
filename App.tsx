@@ -4,7 +4,7 @@ import { ToastContainer } from './components/Toast';
 import { DocumentUpload } from './components/DocumentUpload';
 import { paraphraseText } from './services/geminiService';
 import { ConfigService } from './services/configService';
-import { Sparkles, RefreshCw, Copy, Download, ArrowLeftRight, ChevronDown, Shield, Zap, Target, FileText, Edit3, PenTool, FileText2, Languages } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Download, ArrowLeftRight, ChevronDown, Shield, Zap, Target, FileText, Edit3, PenTool, FileText2, Languages, CheckCircle, Feather, Hammer, GraduationCap } from 'lucide-react';
 
 export default function App() {
   const [originalText, setOriginalText] = useState('');
@@ -93,10 +93,10 @@ export default function App() {
   };
 
   const modes = [
-    { value: 'standard' as ParaphraseMode, label: '标准改写', desc: '保持原意，适度改写' },
-    { value: 'light' as ParaphraseMode, label: '轻度改写', desc: '轻微调整，保留结构' },
-    { value: 'deep' as ParaphraseMode, label: '深度改写', desc: '大幅改写，降重效果好' },
-    { value: 'academic' as ParaphraseMode, label: '学术风格', desc: '学术化表达' }
+    { value: 'standard' as ParaphraseMode, label: '标准改写', desc: '保持原意，适度改写', icon: CheckCircle },
+    { value: 'light' as ParaphraseMode, label: '轻度改写', desc: '轻微调整，保留结构', icon: Feather },
+    { value: 'deep' as ParaphraseMode, label: '深度改写', desc: '大幅改写，降重效果好', icon: Hammer },
+    { value: 'academic' as ParaphraseMode, label: '学术风格', desc: '学术化表达', icon: GraduationCap }
   ];
 
   const faqs = [
@@ -261,20 +261,28 @@ export default function App() {
           {/* Mode Selection */}
           <div className="mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {modes.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setMode(m.value)}
-                  className={`p-4 rounded-xl border-2 transition-all text-left ${
-                    mode === m.value
-                      ? 'border-purple-500 bg-purple-50 shadow-md'
-                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900 mb-1">{m.label}</div>
-                  <div className="text-xs text-gray-500">{m.desc}</div>
-                </button>
-              ))}
+              {modes.map((m) => {
+                const IconComponent = m.icon;
+                return (
+                  <button
+                    key={m.value}
+                    onClick={() => setMode(m.value)}
+                    className={`p-4 rounded-xl border-2 transition-all text-left ${
+                      mode === m.value
+                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2 mb-2">
+                      <IconComponent className={`w-5 h-5 ${
+                        mode === m.value ? 'text-purple-600' : 'text-gray-600'
+                      }`} />
+                      <div className="font-semibold text-gray-900">{m.label}</div>
+                    </div>
+                    <div className="text-xs text-gray-500">{m.desc}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
