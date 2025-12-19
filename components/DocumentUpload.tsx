@@ -116,13 +116,13 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
       setDocumentMetadata(processedDocument.metadata);
 
       // 添加成功反馈
-      const fileType = DocumentService.getFileType(file.name);
-      const isGeminiProcessed = processedDocument.metadata.processingMethod === 'gemini';
+      // 使用已声明的变量，但根据实际处理结果更新isGeminiProcessed
+      const finalProcessingMethod = processedDocument.metadata.processingMethod === 'gemini';
 
       let successMessage = `✅ 文档解析成功！\n\n`;
       successMessage += `文件名：${file.name}\n`;
       successMessage += `提取文本：${cleanedText.length} 字符\n`;
-      successMessage += `处理方式：${isGeminiProcessed ? '🤖 AI智能解析' : '🔒 本地解析'}\n`;
+      successMessage += `处理方式：${finalProcessingMethod ? '🤖 AI智能解析' : '🔒 本地解析'}\n`;
       successMessage += `文档类型：${DocumentService.getFileTypeDescription(fileType)}`;
 
       if (cleanedText.length < 50) {
