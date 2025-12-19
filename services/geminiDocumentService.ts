@@ -1,5 +1,5 @@
 // Gemini文档解析服务
-// 使用gemini-2.0-flash模型进行文档理解和OCR
+// 使用gemini-3-flash-preview模型进行文档理解和OCR
 
 interface GeminiConfig {
   apiKey: string;
@@ -34,7 +34,7 @@ export class GeminiDocumentService {
   private static config: GeminiConfig = {
     apiKey: '',
     apiUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    model: 'gemini-2.0-flash'
+    model: 'gemini-3-flash-preview'
   };
 
   // 初始化配置
@@ -145,7 +145,8 @@ export class GeminiDocumentService {
       }
 
       const text = data.candidates[0].content.parts[0]?.text || '';
-      return text;
+      // 清理提取的文本
+      return this.cleanExtractedText(text);
     } catch (error) {
       console.error('Gemini API调用错误:', error);
       if (error instanceof Error) {
@@ -410,5 +411,68 @@ export class GeminiDocumentService {
   static isFileTypeSupported(file: File): boolean {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
     return this.getSupportedFileTypes().includes(extension);
+  }
+
+  // 清理和过滤提取的文本
+  static cleanExtractedText(text: string): string {
+    // 移除EMF+等图形对象标记
+    text = text.replace(/EMF\+[+\w@]*@[\w\W]*?@/g, '');
+
+    // 移除其他常见的二进制数据标记
+    text = text.replace(/[A-F0-9]{20,}/g, ''); // 移除长串的十六进制字符
+    text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // 移除控制字符
+
+    // 移除重复的空白字符
+    text = text.replace(/\s+/g, ' ');
+
+    // 移除开头的"从...提取的内容"等重复文本
+    text = text.replace(/^从\s+.*?提取的内容[：:]\s*/g, '');
+
+    // 清理每行的开头和结尾
+    const lines = text.split('\n');
+    const cleanedLines = lines.map(line => line.trim()).filter(line => line.length > 0);
+
+    // 重新组合，保持段落结构
+    let result = '';
+    let lastLineWasEmpty = false;
+
+    for (let i = 0; i < cleanedLines.length; i++) {
+      const line = cleanedLines[i];
+
+      // 如果是单字符或短字符串且包含特殊字符，可能是乱码，跳过
+      if (line.length < 5 && /[^\u4e00-\u9fa5\w\s.,!?;:()[\]{}"'，。！？；：（）【】《》]/.test(line)) {
+        continue;
+      }
+
+      // 检查是否是乱码行（包含大量特殊字符）
+      const specialCharRatio = (line.match(/[^\u4e00-\u9fa5\w\s.,!?;:()[\]{}"'，。！？；：（）【】《》]/g) || []).length / line.length;
+      if (specialCharRatio > 0.3) {
+        continue; // 跳过乱码行
+      }
+
+      result += line;
+
+      // 判断是否需要换行
+      const nextLine = cleanedLines[i + 1];
+      if (nextLine && !lastLineWasEmpty) {
+        // 如果下一行以句号、问号、感叹号或段落结束符结尾，或者当前行以这些标点结尾，则换行
+        if (/[。！？.!?]$/.test(line) || /^[（(【[]"']/.test(nextLine)) {
+          result += '\n\n';
+          lastLineWasEmpty = true;
+        } else {
+          result += ' ';
+          lastLineWasEmpty = false;
+        }
+      } else if (!nextLine) {
+        // 最后一段
+        result += '\n';
+      }
+    }
+
+    // 最终清理
+    result = result.replace(/\n{3,}/g, '\n\n'); // 最多两个连续换行
+    result = result.replace(/ {2,}/g, ' '); // 最多一个空格
+
+    return result.trim();
   }
 }

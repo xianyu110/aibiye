@@ -3,18 +3,64 @@ import { Document, Paragraph, TextRun, AlignmentType, Packer } from 'docx';
 import { saveAs } from 'file-saver';
 
 /**
+ * 清理提取的文本中的乱码
+ */
+function cleanExtractedText(text: string): string {
+  // 移除EMF+等图形对象标记
+  text = text.replace(/EMF\+[+\w@]*@[\w\W]*?@/g, '');
+
+  // 移除其他常见的二进制数据标记
+  text = text.replace(/[A-F0-9]{20,}/g, ''); // 移除长串的十六进制字符
+  text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // 移除控制字符
+
+  // 移除重复的空白字符
+  text = text.replace(/\s+/g, ' ');
+
+  // 移除开头的"从...提取的内容"等重复文本
+  text = text.replace(/^从\s+.*?提取的内容[：:]\s*/g, '');
+
+  // 按行清理
+  const lines = text.split('\n');
+  const cleanedLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // 跳过空行
+    if (!trimmedLine) continue;
+
+    // 如果是单字符或短字符串且包含特殊字符，可能是乱码，跳过
+    if (trimmedLine.length < 5 && /[^\u4e00-\u9fa5\w\s.,!?;:()[\]{}"'，。！？；：（）【】《》]/.test(trimmedLine)) {
+      continue;
+    }
+
+    // 检查是否是乱码行（包含大量特殊字符）
+    const specialCharRatio = (trimmedLine.match(/[^\u4e00-\u9fa5\w\s.,!?;:()[\]{}"'，。！？；：（）【】《》]/g) || []).length / trimmedLine.length;
+    if (specialCharRatio > 0.3) {
+      continue; // 跳过乱码行
+    }
+
+    cleanedLines.push(trimmedLine);
+  }
+
+  // 重新组合，保持段落结构
+  return cleanedLines.join('\n\n');
+}
+
+/**
  * 从docx文件中提取纯文本
  */
 export async function extractTextFromDocx(file: File): Promise<string> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
-    
+
     if (!result.value) {
       throw new Error('无法从文档中提取文本');
     }
-    
-    return result.value;
+
+    // 清理提取的文本
+    return cleanExtractedText(result.value);
   } catch (error) {
     console.error('提取文本失败:', error);
     throw new Error('文档解析失败，请确保文件格式正确');

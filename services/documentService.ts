@@ -1,6 +1,8 @@
 // 文档处理服务
 import mammoth from 'mammoth';
 import { DocConverter } from './docConverter';
+import { GeminiDocumentService } from './geminiDocumentService';
+import { ConfigService } from './configService';
 
 export interface ProcessedDocument {
   text: string;
@@ -18,7 +20,11 @@ export class DocumentService {
   // 支持的文件类型
   static supportedTypes = {
     text: ['.txt'],
-    word: ['.doc', '.docx']
+    word: ['.doc', '.docx'],
+    pdf: ['.pdf'],
+    image: ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp'],
+    excel: ['.xls', '.xlsx'],
+    powerpoint: ['.ppt', '.pptx']
   };
 
   // 检查文件类型是否支持
@@ -48,7 +54,8 @@ export class DocumentService {
       throw new Error(`不支持的文件格式: ${file.name}`);
     }
 
-    const fileSizeLimit = 100 * 1024 * 1024; // 100MB限制
+    // 对于Gemini处理的文件，使用20MB限制
+    const fileSizeLimit = (fileType === 'text' || fileType === 'word') ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
 
     if (file.size > fileSizeLimit) {
       throw new Error(`文件大小不能超过${Math.round(fileSizeLimit / 1024 / 1024)}MB`);
@@ -56,9 +63,28 @@ export class DocumentService {
 
     try {
       let extractedText = '';
+      let processingMethod: 'native' | 'gemini' = 'native';
 
-      // 使用本地方法处理文档
-      extractedText = await this.processWithNativeMethod(file, fileType);
+      // 优先使用Gemini处理支持的格式
+      if (this.canUseGemini(fileType)) {
+        try {
+          extractedText = await this.processWithGemini(file, fileType);
+          processingMethod = 'gemini';
+        } catch (geminiError) {
+          console.warn('Gemini处理失败，回退到本地方法:', geminiError);
+          // 对于Word文档，回退到本地方法
+          if (fileType === 'word') {
+            extractedText = await this.processWithNativeMethod(file, fileType);
+            processingMethod = 'native';
+          } else {
+            throw geminiError;
+          }
+        }
+      } else {
+        // 使用本地方法处理文档
+        extractedText = await this.processWithNativeMethod(file, fileType);
+        processingMethod = 'native';
+      }
 
       return {
         text: extractedText,
@@ -67,12 +93,44 @@ export class DocumentService {
           fileSize: file.size,
           fileType,
           extractedAt: new Date(),
-          processingMethod: 'native'
+          processingMethod
         }
       };
     } catch (error) {
       console.error('文档处理失败:', error);
       throw new Error(`文档处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  }
+
+  // 判断是否可以使用Gemini处理
+  private static canUseGemini(fileType: string): boolean {
+    const geminiSupportedTypes = ['pdf', 'image', 'excel', 'powerpoint', 'word'];
+    return ConfigService.canUseGeminiForDocuments() && geminiSupportedTypes.includes(fileType);
+  }
+
+  // 使用Gemini处理文档
+  private static async processWithGemini(file: File, fileType: string): Promise<string> {
+    // 使用配置服务获取Gemini配置
+    if (!ConfigService.canUseGeminiForDocuments()) {
+      throw new Error('Gemini文档解析功能未启用或API Key未配置');
+    }
+
+    const geminiConfig = ConfigService.getGeminiConfig();
+    // GeminiDocumentService已在ConfigService中初始化，这里不需要重复初始化
+
+    switch (fileType) {
+      case 'pdf':
+        return await GeminiDocumentService.processPdfDocument(file);
+      case 'image':
+        return await GeminiDocumentService.processImageDocument(file);
+      case 'word':
+        return await GeminiDocumentService.processWordDocument(file);
+      case 'excel':
+        return await GeminiDocumentService.processExcelDocument(file);
+      case 'powerpoint':
+        return await GeminiDocumentService.processPowerPointDocument(file);
+      default:
+        throw new Error(`Gemini无法处理的文件类型: ${fileType}`);
     }
   }
 
@@ -286,7 +344,11 @@ ${result}
   static getFileIcon(fileType: string): string {
     const icons: Record<string, string> = {
       text: '📄',
-      word: '📝'
+      word: '📝',
+      pdf: '📕',
+      image: '🖼️',
+      excel: '📊',
+      powerpoint: '📽️'
     };
 
     return icons[fileType] || '📎';
@@ -296,7 +358,11 @@ ${result}
   static getFileTypeDescription(fileType: string): string {
     const descriptions: Record<string, string> = {
       text: '文本文档',
-      word: 'Word文档'
+      word: 'Word文档',
+      pdf: 'PDF文档',
+      image: '图片文档',
+      excel: 'Excel表格',
+      powerpoint: 'PowerPoint演示文稿'
     };
 
     return descriptions[fileType] || '未知类型';

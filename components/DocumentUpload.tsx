@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, File, X, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { Upload, File, X, CheckCircle, AlertCircle, FileText, Image, FileSpreadsheet, Presentation } from 'lucide-react';
 import { DocumentService, ProcessedDocument } from '../services/documentService';
 
 interface DocumentUploadProps {
@@ -20,6 +20,14 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
     { extension: 'txt', name: '文本文档', icon: FileText },
     { extension: 'doc', name: 'Word文档(旧版)', icon: FileText },
     { extension: 'docx', name: 'Word文档(新版)', icon: FileText },
+    { extension: 'pdf', name: 'PDF文档', icon: FileText },
+    { extension: 'jpg', name: 'JPEG图片', icon: Image },
+    { extension: 'jpeg', name: 'JPEG图片', icon: Image },
+    { extension: 'png', name: 'PNG图片', icon: Image },
+    { extension: 'xls', name: 'Excel表格(旧版)', icon: FileSpreadsheet },
+    { extension: 'xlsx', name: 'Excel表格(新版)', icon: FileSpreadsheet },
+    { extension: 'ppt', name: 'PowerPoint(旧版)', icon: Presentation },
+    { extension: 'pptx', name: 'PowerPoint(新版)', icon: Presentation },
   ];
 
   const handleDrag = (e: React.DragEvent) => {
@@ -51,7 +59,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
   const handleFile = async (file: File) => {
     // 检查文件格式
     if (!DocumentService.isSupported(file.name)) {
-      alert('不支持的文件格式。请上传doc、docx或txt格式文件');
+      alert('不支持的文件格式。请上传支持的文档格式文件');
       return;
     }
 
@@ -64,12 +72,30 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
     setExtractingProgress(0);
 
     try {
-      // 对于.doc文件，提供进度回调
+      // 获取文件类型用于显示处理信息
+      const fileType = DocumentService.getFileType(file.name);
+      const isGeminiProcessed = ['pdf', 'image', 'excel', 'powerpoint'].includes(fileType);
       const isDocFile = file.name.toLowerCase().endsWith('.doc');
 
       let processedDocument;
-      if (isDocFile) {
-        // 需要特殊处理进度，先简单实现
+
+      // 模拟进度更新
+      if (isGeminiProcessed) {
+        // Gemini AI处理，显示AI分析进度
+        const progressInterval = setInterval(() => {
+          setExtractingProgress(prev => {
+            if (prev < 30) return prev + 5;
+            if (prev < 70) return prev + 3;
+            if (prev < 90) return prev + 1;
+            return prev;
+          });
+        }, 100);
+
+        processedDocument = await DocumentService.processDocument(file);
+        clearInterval(progressInterval);
+        setExtractingProgress(100);
+      } else if (isDocFile) {
+        // DOC文件转换处理
         const progressInterval = setInterval(() => {
           setExtractingProgress(prev => Math.min(prev + 10, 90));
         }, 200);
@@ -78,6 +104,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
         clearInterval(progressInterval);
         setExtractingProgress(100);
       } else {
+        // 本地快速处理
         setExtractingProgress(50);
         processedDocument = await DocumentService.processDocument(file);
         setExtractingProgress(100);
@@ -87,10 +114,60 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
 
       setExtractedText(cleanedText);
       setDocumentMetadata(processedDocument.metadata);
+
+      // 添加成功反馈
+      const fileType = DocumentService.getFileType(file.name);
+      const isGeminiProcessed = processedDocument.metadata.processingMethod === 'gemini';
+
+      let successMessage = `✅ 文档解析成功！\n\n`;
+      successMessage += `文件名：${file.name}\n`;
+      successMessage += `提取文本：${cleanedText.length} 字符\n`;
+      successMessage += `处理方式：${isGeminiProcessed ? '🤖 AI智能解析' : '🔒 本地解析'}\n`;
+      successMessage += `文档类型：${DocumentService.getFileTypeDescription(fileType)}`;
+
+      if (cleanedText.length < 50) {
+        successMessage += `\n\n⚠️ 提取的文本较少，请确认文档内容是否���确`;
+      } else if (cleanedText.length > 10000) {
+        successMessage += `\n\n💡 文本较长，建议分段处理以获得最佳效果`;
+      }
+
+      // 显示成功提示（使用console.log而不是alert，避免打断用户体验）
+      console.log(successMessage);
+
       onTextExtracted(cleanedText, processedDocument.metadata);
     } catch (error) {
       console.error('文件处理失败:', error);
-      alert(error instanceof Error ? error.message : '文件处理失败，请重试或尝试其他文件');
+
+      let errorMessage = '文件处理失败，请重试';
+
+      if (error instanceof Error) {
+        // 根据错误类型提供更具体的提示
+        if (error.message.includes('API Key未配置')) {
+          errorMessage = '🔑 AI文档解析功能未配置\n\n请联系管理员配置Gemini API Key，或尝试上传Word/TXT文件使用本地解析功能。';
+        } else if (error.message.includes('文件过大') || error.message.includes('文件大小')) {
+          errorMessage = '📁 文件过大\n\n' + error.message + '\n请尝试压缩文件或分割成多个小文件。';
+        } else if (error.message.includes('不支持的文件格式')) {
+          errorMessage = '📄 不支持的文件格式\n\n' + error.message + '\n请选择支持的文件格式。';
+        } else if (error.message.includes('网络连接错误')) {
+          errorMessage = '🌐 网络连接错误\n\n请检查网络连接后重试，或尝试使用Word/TXT文件进行本地解析。';
+        } else if (error.message.includes('API调用频率过高')) {
+          errorMessage = '⚡ API调用过于频繁\n\n请稍等片刻后重试，或尝试使用Word/TXT文件进行本地解析。';
+        } else if (error.message.includes('文档内容无法识别')) {
+          errorMessage = '📷 无法识别文档内容\n\n请确保文档清晰可读，或尝试其他文件。';
+        } else {
+          errorMessage = `❌ ${error.message}`;
+        }
+      }
+
+      // 显示友好的错误提示
+      if (confirm(errorMessage + '\n\n是否查看支持的文件格式说明？')) {
+        // 滚动到格式说明区域
+        document.querySelector('.bg-gradient-to-r.from-blue-50.to-purple-50')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+
       setUploadedFile(null);
       setDocumentMetadata(null);
       setExtractingProgress(0);
@@ -116,12 +193,56 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
     fileInputRef.current?.click();
   };
 
+  // 获取处理消息
+  const getProcessingMessage = (fileName: string, progress: number): string => {
+    const fileType = DocumentService.getFileType(fileName);
+    const isGeminiProcessed = ['pdf', 'image', 'excel', 'powerpoint'].includes(fileType);
+    const isDocFile = fileName.toLowerCase().endsWith('.doc');
+
+    if (isGeminiProcessed) {
+      if (progress < 30) return '🤖 AI正在分析文档结构...';
+      if (progress < 70) return '🧠 AI正在提取和解析内容...';
+      if (progress < 90) return '⚡ AI正在优化文本格式...';
+      return '✨ AI解析即将完成...';
+    }
+
+    if (isDocFile) {
+      if (progress < 30) return '📄 正在转换.doc文件...';
+      if (progress < 70) return '🔤 正在提取文本内容...';
+      return '📝 正在优化文档格式...';
+    }
+
+    return '⚡ 正在提取文本内容...';
+  };
+
+  // 获取处理详情
+  const getProcessingDetails = (fileName: string, progress: number): string => {
+    const fileType = DocumentService.getFileType(fileName);
+    const isGeminiProcessed = ['pdf', 'image', 'excel', 'powerpoint'].includes(fileType);
+    const isDocFile = fileName.toLowerCase().endsWith('.doc');
+
+    if (isGeminiProcessed) {
+      if (progress < 30) return `使用Gemini AI解析${DocumentService.getFileTypeDescription(fileType)}`;
+      if (progress < 70) return `智能识别文档内容和格式`;
+      if (progress < 90) return `清理和优化提取的文本`;
+      return `即将完成，请稍候...`;
+    }
+
+    if (isDocFile) {
+      if (progress < 30) return '解析文档结构...';
+      if (progress < 70) return '提取文本内容...';
+      return '创建DOCX格式...';
+    }
+
+    return '';
+  };
+
   return (
     <div className="w-full">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">上传文档</h3>
         <p className="text-sm text-gray-600">
-          支持doc、docx、txt格式文件，文件大小不超过100M
+          支持Word、PDF、图片、Excel、PowerPoint等格式，AI智能解析文档内容
         </p>
       </div>
 
@@ -142,7 +263,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.doc,.docx"
+            accept=".txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.bmp,.tiff,.gif,.webp,.xls,.xlsx,.ppt,.pptx"
             onChange={handleFileInput}
             className="hidden"
             disabled={isLoading}
@@ -153,10 +274,10 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
             点击上传或拖拽文件到此处
           </h4>
           <p className="text-sm text-gray-600 mb-4">
-            支持doc、docx、txt格式文件，文件大小不超过100M
+            支持Word、PDF、图片、Excel、PowerPoint等格式，AI智能解析
           </p>
           <p className="text-xs text-gray-500">
-            最大文件大小：100M
+            最大文件大小：20M (PDF/图片/Excel/PPT)，100M (Word/TXT)
           </p>
         </div>
       ) : (
@@ -196,7 +317,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
               <div className="flex items-center justify-center mb-3">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
                 <span className="text-sm text-gray-600">
-                  {uploadedFile?.name.endsWith('.doc') ? '正在转换.doc文件...' : '正在提取文本内容...'}
+                  {getProcessingMessage(uploadedFile?.name || '', extractingProgress)}
                 </span>
               </div>
               {extractingProgress > 0 && (
@@ -207,11 +328,9 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
                   ></div>
                 </div>
               )}
-              {uploadedFile?.name.endsWith('.doc') && (
+              {getProcessingDetails(uploadedFile?.name || '', extractingProgress) && (
                 <div className="text-xs text-gray-500 mt-2 text-center">
-                  {extractingProgress < 30 ? '解析文档结构...' :
-                   extractingProgress < 70 ? '提取文本内容...' :
-                   '创建DOCX格式...'}
+                  {getProcessingDetails(uploadedFile?.name || '', extractingProgress)}
                 </div>
               )}
             </div>
@@ -249,8 +368,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
       )}
 
       {/* 支持的格式说明 */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-3">支持的文档格式</h4>
+      <div className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-blue-900 mb-3">📁 支持的文档格式</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {supportedFormats.map((format) => {
             const Icon = format.icon;
@@ -262,12 +381,17 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onTextExtracted,
             );
           })}
         </div>
-        <p className="text-xs text-blue-700 mt-3">
-          💡 提示：使用mammoth.js库进行本地文档解析，安全可靠，保护隐私
-        </p>
-        <p className="text-xs text-orange-600 mt-2">
-          ⚠️ 注意：.doc格式自动转换为.docx后解析，.docx和.txt格式可直接解析，文件大小最大支持100MB
-        </p>
+        <div className="mt-4 space-y-2">
+          <p className="text-xs text-blue-700">
+            🚀 <strong>AI智能解析：</strong>PDF、图片、Excel、PowerPoint使用Gemini 3 Flash Preview AI模型进行智能解析
+          </p>
+          <p className="text-xs text-green-700">
+            🔒 <strong>本地处理：</strong>Word文档使用mammoth.js库进行本地解析，安全可靠，保护隐私
+          </p>
+          <p className="text-xs text-orange-600">
+            ⚠️ <strong>注意事项：</strong>PDF/图片/Excel/PPT最大20MB，Word/TXT最大100MB
+          </p>
+        </div>
       </div>
     </div>
   );

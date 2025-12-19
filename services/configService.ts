@@ -25,7 +25,7 @@ export class ConfigService {
     gemini: {
       apiKey: '',
       apiUrl: 'https://generativelanguage.googleapis.com/v1beta',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-flash-preview',
       enabled: true
     }
   };
@@ -39,7 +39,7 @@ export class ConfigService {
 
     this.config.gemini.apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
     this.config.gemini.apiUrl = import.meta.env.VITE_GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta';
-    this.config.gemini.model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash';
+    this.config.gemini.model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3-flash-preview';
     this.config.gemini.enabled = import.meta.env.VITE_ENABLE_GEMINI_DOCUMENT_PROCESSING !== 'false';
 
     // 初始化Gemini服务
