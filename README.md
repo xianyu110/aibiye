@@ -3,16 +3,24 @@
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/你的用户名/你的仓库名)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![API Status](https://img.shields.io/badge/API-Ready-green)](https://apipro.maynor1024.live/)
 
-基于 DeepSeek API 构建的现代化文本降重工具。通过先进的 AI 技术，智能改写文本内容，有效降低重复率，适用于论文、报告、文章等各类文本的原创性优化。
+基于 **MaynorAI API** 构建的现代化文本降重工具。通过先进的 AI 技术，智能改写文本内容，有效降低重复率，适用于论文、报告、文章等各类文本的原创性优化。
+
+## 🚨 重要提醒
+
+**推荐API地址**: `https://apipro.maynor1024.live/`
+
+本项目已配置使用 MaynorAI 的专业 API 服务，提供更稳定、更快速的文本改写体验。
 
 ## 🌟 项目亮点
 
-*   **智能改写**: 利用 DeepSeek 模型的强大语言理解能力，生成高质量的同义替换和句式重构。
+*   **智能改写**: 利用 MaynorAI API 的强大语言理解能力，生成高质量的同义替换和句式重构。
 *   **多种模式**: 提供标准、轻度、深度、学术四种改写模式，满足不同场景需求。
 *   **保持原意**: 确保改写后的文本保持原文核心含义，保留专业术语和专有名词。
-*   **友好界面**: 使用 Tailwind CSS 打造的现代化响应式界面，支持实时字符统计。
+*   **友好界面**: 使用 Tailwind CSS 打造的现代化响应式界面，支持实时字符���计。
 *   **高效处理**: 支持大文本分段处理，提供流畅的加载动画和进度反馈。
+*   **专业API**: 使用 `https://apipro.maynor1024.live/` 提供稳定可靠的服务。
 
 ## 🚀 核心功能
 
@@ -39,13 +47,13 @@
 *   **前端框架**: React 19 + TypeScript
 *   **构建工具**: Vite
 *   **样式库**: Tailwind CSS
-*   **AI 模型**: DeepSeek API
+*   **AI 模型**: MaynorAI API (`https://apipro.maynor1024.live/`)
 *   **图标库**: Lucide React
 
 ## 📂 项目结构
 
 *   `App.tsx`: 主应用逻辑及状态管理
-*   `services/geminiService.ts`: DeepSeek API 调用封装
+*   `services/geminiService.ts`: MaynorAI API 调用封装
 *   `components/ParaphraseForm.tsx`: 文本输入和模式选择组件
 *   `components/LoadingView.tsx`: 加载动画组件
 *   `components/ResultView.tsx`: 结果展示组件
@@ -75,18 +83,29 @@ npm install
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入你的 DeepSeek API Key：
+编辑 `.env` 文件，配置你的 API 设置：
 
 ```env
-# DeepSeek API Key (从 https://platform.deepseek.com/ 获取)
-VITE_DEEPSEEK_API_KEY=your_deepseek_api_key_here
+# MaynorAI API Key (联系获取或使用提供的默认配置)
+VITE_DEEPSEEK_API_KEY=your_api_key_here
 
-# DeepSeek API URL (可选，使用默认地址)
-VITE_DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
+# MaynorAI API URL (推荐使用)
+VITE_DEEPSEEK_API_URL=https://apipro.maynor1024.live/v1/chat/completions
 
-# DeepSeek 模型名称 (可选，使用默认模型)
+# 模型名称 (使用默认配置)
 VITE_DEEPSEEK_MODEL=deepseek-chat
 ```
+
+## 🌐 API 配置说明
+
+**推荐配置**:
+- **API 地址**: `https://apipro.maynor1024.live/`
+- **服务特点**: 专业优化的AI文本处理服务，提供更快的响应速度和更好的稳定性
+
+**获取 API Key**:
+1. 联系项目维护者获取 API 访问权限
+2. 或使用提供的测试 Key 进行体验
+3. 确保 API 地址指向 `https://apipro.maynor1024.live/`
 
 #### 4. 启动开发服务器
 
@@ -95,6 +114,32 @@ npm run dev
 ```
 
 访问 http://localhost:3000 即可使用。
+
+## 🔌 API 服务说明
+
+### 🚨 重要：API 地址配置
+
+**请确保使用正确的 API 地址**: `https://apipro.maynor1024.live/`
+
+### 服务特点
+
+- ✅ **高性能**: 专门优化的AI文本处理服务
+- ✅ **高可用**: 稳定可靠的服务器架构
+- ✅ **快速响应**: 毫秒级文本处理速度
+- ✅ **智能改写**: 先进的自然语言处理技术
+- ✅ **安全可靠**: 数据传输加密，隐私保护
+
+### 配置示例
+
+```env
+# 推荐配置
+VITE_DEEPSEEK_API_URL=https://apipro.maynor1024.live/v1/chat/completions
+VITE_DEEPSEEK_MODEL=deepseek-chat
+```
+
+### 测试连接
+
+启动项目后，如果看到页面正常加载并可以进行文本改写，说明 API 连接成功。
 
 ### Vercel 部署
 
@@ -142,7 +187,7 @@ npm run dev
 
 ### API 配置
 
-DeepSeek API 配置在 `services/geminiService.ts` 中，支持自定义 API 端点和模型。
+MaynorAI API 配置在 `services/geminiService.ts` 中，支持自定义 API 端点和模型。**推荐使用 `https://apipro.maynor1024.live/` 以获得最佳体验**。
 
 ### 构建优化
 
