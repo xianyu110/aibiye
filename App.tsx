@@ -265,7 +265,7 @@ export default function App() {
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Hero Section - 只在单篇改写时显示 */}
       {currentTab === 'single' && (
